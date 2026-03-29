@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Whisper SRT Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #07080f;
+    --surface: #0f1018;
+    --border: #1a1b2e;
+    --accent: #00e5ff;
+    --accent2: #ff6b9d;
+    --accent3: #a78bfa;
+    --text: #e2e4f0;
+    --muted: #525470;
+    --success: #00ffa3;
+    --warn: #ffd166;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 80% 0%, rgba(0,229,255,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 50% at 20% 100%, rgba(167,139,250,0.07) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .scanlines {
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 740px;
+    margin: 0 auto;
+    padding: 52px 24px 100px;
+  }
+
+  header { margin-bottom: 48px; }
+
+  .logo-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+
+  .logo-icon {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, rgba(0,229,255,0.15), rgba(167,139,250,0.15));
+    border: 1px solid rgba(0,229,255,0.25);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+  }
+
+  .logo-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    font-size: clamp(2rem, 5.5vw, 3.2rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -1.5px;
+    margin-bottom: 12px;
+  }
+
+  h1 em {
+    font-style: normal;
+    color: var(--accent);
+    text-shadow: 0 0 30px rgba(0,229,255,0.4);
+  }
+
+  .tagline {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .free-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 14px;
+    background: rgba(0,255,163,0.07);
+    border: 1px solid rgba(0,255,163,0.2);
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--success);
+    letter-spacing: 1px;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 16px;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .card:nth-child(1) { animation-delay: 0.05s; }
+  .card:nth-child(2) { animation-delay: 0.1s; }
+  .card:nth-child(3) { animation-delay: 0.15s; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Drop zone */
+  .dropzone {
+    position: relative;
+    border: 2px dashed rgba(0,229,255,0.2);
+    border-radius: 12px;
+    padding: 44px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: rgba(0,229,255,0.02);
+  }
+
+  .dropzone:hover, .dropzone.over {
+    border-color: var(--accent);
+    background: rgba(0,229,255,0.04);
+    box-shadow: 0 0 30px rgba(0,229,255,0.07);
+  }
+
+  .dropzone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .drop-wave {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 16px;
+    position: relative;
+  }
+
+  .drop-wave svg { width: 100%; height: 100%; }
+
+  .drop-title {
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 6px;
+    letter-spacing: -0.3px;
+  }
+
+  .drop-formats {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .file-chip {
+    display: none;
+    margin-top: 16px;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0,255,163,0.05);
+    border: 1px solid rgba(0,255,163,0.15);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--success);
+    text-align: left;
+  }
+
+  .file-chip.show { display: flex; }
+
+  .file-chip-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-chip-size { color: var(--muted); flex-shrink: 0; }
+
+  /* Settings */
+  .settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  @media (max-width: 480px) { .settings-grid { grid-template-columns: 1fr; } }
+
+  .field label {
+    display: block;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    padding: 11px 14px;
+    border-radius: 10px;
+    outline: none;
+    transition: border-color 0.2s;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23525470' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+  }
+
+  select:focus { border-color: var(--accent); }
+  select option { background: #0f1018; }
+
+  .model-hint {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+
+  /* Generate button */
+  .btn-generate {
+    width: 100%;
+    padding: 15px;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    border-radius: 12px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.25s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-generate::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--accent);
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+
+  .btn-generate:hover:not(:disabled)::before { opacity: 0.08; }
+  .btn-generate:hover:not(:disabled) {
+    box-shadow: 0 0 30px rgba(0,229,255,0.2);
+    transform: translateY(-1px);
+  }
+
+  .btn-generate:disabled { opacity: 0.35; cursor: not-allowed; }
+  .btn-generate span { position: relative; z-index: 1; }
+
+  /* Progress */
+  .progress-wrap { display: none; }
+  .progress-wrap.show { display: block; }
+
+  .progress-track {
+    height: 3px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 18px 0 12px;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent3));
+    border-radius: 3px;
+    animation: indeterminate 1.4s ease-in-out infinite;
+    transform-origin: left;
+  }
+
+  @keyframes indeterminate {
+    0% { transform: translateX(-100%) scaleX(0.5); }
+    50% { transform: translateX(0%) scaleX(0.5); }
+    100% { transform: translateX(200%) scaleX(0.5); }
+  }
+
+  .progress-status {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dot-pulse {
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 1s infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  /* Error */
+  .error-box {
+    display: none;
+    background: rgba(255,107,157,0.06);
+    border: 1px solid rgba(255,107,157,0.2);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--accent2);
+    line-height: 1.6;
+    margin-top: 14px;
+  }
+
+  .error-box.show { display: block; }
+
+  /* Result */
+  .result-card {
+    display: none;
+    background: var(--surface);
+    border: 1px solid rgba(0,255,163,0.15);
+    border-radius: 16px;
+    padding: 24px;
+    margin-top: 16px;
+    animation: fadeUp 0.4s ease;
+  }
+
+  .result-card.show { display: block; }
+
+  .result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .result-title {
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--success);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .chip {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: rgba(0,229,255,0.07);
+    border: 1px solid rgba(0,229,255,0.15);
+    color: var(--accent);
+    letter-spacing: 1px;
+  }
+
+  .srt-preview {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11.5px;
+    line-height: 1.8;
+    color: #8888aa;
+    max-height: 280px;
+    overflow-y: auto;
+    white-space: pre;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+    margin-bottom: 14px;
+  }
+
+  .srt-preview .ts { color: rgba(0,229,255,0.5); }
+  .srt-preview .num { color: rgba(167,139,250,0.6); }
+  .srt-preview .txt { color: #ccccdd; }
+
+  .result-actions { display: flex; gap: 10px; }
+
+  .btn-dl {
+    flex: 1;
+    padding: 12px;
+    background: rgba(0,255,163,0.08);
+    border: 1px solid rgba(0,255,163,0.25);
+    color: var(--success);
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+
+  .btn-dl:hover { background: rgba(0,255,163,0.14); transform: translateY(-1px); }
+
+  .btn-copy {
+    padding: 12px 20px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-copy:hover { border-color: var(--accent3); color: var(--text); }
+
+  footer {
+    text-align: center;
+    margin-top: 60px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+<div class="scanlines"></div>
+<div class="container">
+
+  <header>
+    <div class="logo-row">
+      <div class="logo-icon">🎙</div>
+      <div class="logo-text">Whisper SRT</div>
+    </div>
+    <h1>Audio to <em>SRT</em><br>— Locally Free</h1>
+    <p class="tagline">// open-source · runs on your machine · no api key</p>
+    <div class="free-badge">✦ 100% FREE — Powered by OpenAI Whisper (local)</div>
+  </header>
+
+  <!-- Upload -->
+  <div class="card">
+    <div class="section-label">01 — Audio File</div>
+    <div class="dropzone" id="dropzone">
+      <input type="file" id="fileInput" accept="audio/*,video/*">
+      <div class="drop-wave">
+        <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="56" height="56" rx="14" fill="rgba(0,229,255,0.08)"/>
+          <rect x="0.5" y="0.5" width="55" height="55" rx="13.5" stroke="rgba(0,229,255,0.2)"/>
+          <path d="M14 28 Q17 20, 20 28 Q23 36, 26 28 Q29 20, 32 28 Q35 36, 38 28 Q41 20, 44 28" stroke="#00e5ff" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.7"/>
+        </svg>
+      </div>
+      <div class="drop-title">Drop audio or video file</div>
+      <div class="drop-formats">MP3 · WAV · M4A · OGG · FLAC · MP4 · MKV · MOV · WEBM</div>
+    </div>
+    <div class="file-chip" id="fileChip">
+      <span>✓</span>
+      <span class="file-chip-name" id="chipName"></span>
+      <span class="file-chip-size" id="chipSize"></span>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div class="card">
+    <div class="section-label">02 — Settings</div>
+    <div class="settings-grid">
+      <div class="field">
+        <label>Model Size</label>
+        <select id="model">
+          <option value="tiny">tiny — fastest, least accurate</option>
+          <option value="base" selected>base — good balance ✓</option>
+          <option value="small">small — better accuracy</option>
+          <option value="medium">medium — very accurate</option>
+          <option value="large">large — best, slowest</option>
+        </select>
+        <div class="model-hint" id="modelHint">~74MB · fast · good for most audio</div>
+      </div>
+      <div class="field">
+        <label>Language</label>
+        <select id="language">
+          <option value="">Auto-detect</option>
+          <option value="en">English</option>
+          <option value="hi">Hindi</option>
+          <option value="es">Spanish</option>
+          <option value="fr">French</option>
+          <option value="de">German</option>
+          <option value="ja">Japanese</option>
+          <option value="zh">Chinese</option>
+          <option value="ar">Arabic</option>
+          <option value="pt">Portuguese</option>
+          <option value="ru">Russian</option>
+          <option value="ko">Korean</option>
+          <option value="it">Italian</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Generate -->
+  <button class="btn-generate" id="genBtn" onclick="generate()">
+    <span>⚡ Generate SRT File</span>
+  </button>
+
+  <!-- Progress -->
+  <div class="progress-wrap card" id="progressWrap" style="margin-top:16px;">
+    <div class="section-label">Processing</div>
+    <div class="progress-track"><div class="progress-fill"></div></div>
+    <div class="progress-status">
+      <div class="dot-pulse"></div>
+      <span id="statusTxt">Loading Whisper model…</span>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div class="error-box" id="errorBox"></div>
+
+  <!-- Result -->
+  <div class="result-card" id="resultCard">
+    <div class="result-header">
+      <div class="result-title">✓ Subtitles Ready</div>
+      <div class="chips" id="chips"></div>
+    </div>
+    <div class="srt-preview" id="srtPreview"></div>
+    <div class="result-actions">
+      <button class="btn-dl" onclick="downloadSRT()">⬇ Download .srt</button>
+      <button class="btn-copy" id="copyBtn" onclick="copySRT()">Copy</button>
+    </div>
+  </div>
+
+  <footer>Running locally · Your files never leave your machine</footer>
+</div>
+
+<script>
+let selectedFile = null;
+let srtContent = '';
+let baseName = 'subtitles';
+
+const modelHints = {
+  tiny:   '~39MB · ultra-fast · basic accuracy',
+  base:   '~74MB · fast · good for most audio',
+  small:  '~244MB · balanced · better accuracy',
+  medium: '~769MB · slow · high accuracy',
+  large:  '~1.5GB · very slow · best quality'
+};
+
+document.getElementById('model').addEventListener('change', function() {
+  document.getElementById('modelHint').textContent = modelHints[this.value];
+});
+
+// File input
+document.getElementById('fileInput').addEventListener('change', function() {
+  handleFile(this.files[0]);
+});
+
+// Drag and drop
+const dz = document.getElementById('dropzone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault();
+  dz.classList.remove('over');
+  const f = e.dataTransfer.files[0];
+  if (f) handleFile(f);
+});
+
+function handleFile(file) {
+  if (!file) return;
+  selectedFile = file;
+  baseName = file.name.replace(/\.[^.]+$/, '');
+  document.getElementById('chipName').textContent = file.name;
+  const mb = (file.size / 1024 / 1024).toFixed(1);
+  document.getElementById('chipSize').textContent = mb + ' MB';
+  document.getElementById('fileChip').classList.add('show');
+  hideError();
+  document.getElementById('resultCard').classList.remove('show');
+}
+
+async function generate() {
+  if (!selectedFile) { showError('Please select an audio or video file first.'); return; }
+  hideError();
+  document.getElementById('resultCard').classList.remove('show');
+  document.getElementById('genBtn').disabled = true;
+  document.getElementById('progressWrap').classList.add('show');
+  setStatus('Loading Whisper model… (first run downloads the model)');
+
+  const formData = new FormData();
+  formData.append('file', selectedFile, selectedFile.name);
+  formData.append('model', document.getElementById('model').value);
+  formData.append('language', document.getElementById('language').value);
+
+  setTimeout(() => setStatus('Transcribing audio… please wait'), 1500);
+
+  try {
+    const res = await fetch('/transcribe', { method: 'POST', body: formData });
+    const data = await res.json();
+
+    if (!res.ok || data.error) throw new Error(data.error || 'Transcription failed');
+
+    srtContent = data.srt;
+    showResult(data);
+  } catch(e) {
+    showError('❌ ' + e.message);
+  } finally {
+    document.getElementById('genBtn').disabled = false;
+    document.getElementById('progressWrap').classList.remove('show');
+  }
+}
+
+function showResult(data) {
+  // Syntax-highlight SRT
+  const highlighted = data.srt.replace(
+    /^(\d+)$/gm, '<span class="num">$1</span>'
+  ).replace(
+    /(\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3})/g,
+    '<span class="ts">$1</span>'
+  );
+
+  document.getElementById('srtPreview').innerHTML = highlighted;
+
+  const langLabel = data.language ? data.language.toUpperCase() : '?';
+  document.getElementById('chips').innerHTML =
+    `<div class="chip">${data.segment_count} segments</div>` +
+    `<div class="chip">~${data.word_count} words</div>` +
+    `<div class="chip">lang: ${langLabel}</div>`;
+
+  document.getElementById('resultCard').classList.add('show');
+  document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function downloadSRT() {
+  const blob = new Blob([srtContent], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = baseName + '.srt';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function copySRT() {
+  navigator.clipboard.writeText(srtContent).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = 'Copied!';
+    btn.style.color = 'var(--success)';
+    setTimeout(() => { btn.textContent = 'Copy'; btn.style.color = ''; }, 2000);
+  });
+}
+
+function setStatus(msg) { document.getElementById('statusTxt').textContent = msg; }
+function showError(msg) { const e = document.getElementById('errorBox'); e.textContent = msg; e.classList.add('show'); }
+function hideError() { document.getElementById('errorBox').classList.remove('show'); }
+</script>
+</body>
+</html>
